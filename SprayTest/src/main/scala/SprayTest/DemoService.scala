@@ -1,3 +1,4 @@
+package Spray1
 
 import scala.concurrent.duration._
 import akka.pattern.ask
@@ -9,11 +10,28 @@ import spray.util._
 import spray.http._
 import HttpMethods._
 import MediaTypes._
+import java.io._
 
 
 class DemoService extends Actor with SprayActorLogging {
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
   import context.dispatcher // ExecutionContext for the futures and scheduler
+
+
+  def appendFile(fileName: String, line: String) = {
+    val fw = new FileWriter(fileName , true) ;
+    fw.write("\n" + line) ;
+    fw.close()
+  }
+
+
+
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
+
+
+
+  }
+  var p = new java.io.File("file.txt");
 
   def receive = {
     // when a new connection comes in we register ourselves as the connection handler
@@ -22,8 +40,20 @@ class DemoService extends Actor with SprayActorLogging {
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
       sender ! index
 
-    case HttpRequest(GET, Uri.Path("/ping"), _, _, _) =>
-      sender ! HttpResponse(entity = "PONG!")
+    case HttpRequest(GET, Uri.Path("/plik"), _, _, _) =>
+      val source = scala.io.Source.fromFile("file.txt")
+      val lines = source.mkString
+      sender ! HttpResponse(entity = lines)
+      source.close()
+
+
+    case HttpRequest(GET, Uri.Path("/edytuj"), _, _, _) =>
+      val source = scala.io.Source.fromFile("file.txt")
+      val data = Array("Five","strings","in","a","file!")
+      appendFile("file.txt", "alal")
+      val lines = source.mkString
+      sender ! HttpResponse(entity = lines)
+      source.close()
 
     case HttpRequest(GET, Uri.Path("/stream"), _, _, _) =>
       val peer = sender // since the Props creator is executed asyncly we need to save the sender ref
@@ -57,7 +87,10 @@ class DemoService extends Actor with SprayActorLogging {
         status = 500,
         entity = "The " + method + " request to '" + uri + "' has timed out..."
       )
+
   }
+
+
 
   ////////////// helpers //////////////
 
@@ -68,7 +101,8 @@ class DemoService extends Actor with SprayActorLogging {
           <h1>Say hello to <i>spray-can</i>!</h1>
           <p>Defined resources:</p>
           <ul>
-            <li><a href="/ping">/ping</a></li>
+            <li><a href="/plik">/Wyswietl_plik</a></li>
+            <li><a href="/edytuj">/Edytuj</a></li>
             <li><a href="/stream">/stream</a></li>
             <li><a href="/server-stats">/server-stats</a></li>
             <li><a href="/crash">/crash</a></li>
@@ -100,6 +134,9 @@ class DemoService extends Actor with SprayActorLogging {
       </html>.toString()
     )
   )
+
+
+
 
   class Streamer(client: ActorRef, count: Int) extends Actor with SprayActorLogging {
     log.debug("Starting streaming response ...")
