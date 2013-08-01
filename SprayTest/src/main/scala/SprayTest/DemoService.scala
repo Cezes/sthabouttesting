@@ -13,6 +13,7 @@ import MediaTypes._
 import java.io._
 import java.net.URL
 import javax.swing.text.AbstractDocument.Content
+import scala.collection.mutable
 
 
 class DemoService extends Actor with SprayActorLogging {
@@ -22,7 +23,7 @@ class DemoService extends Actor with SprayActorLogging {
 
   def appendFile(fileName: String, line: String) = {
     val fw = new FileWriter(fileName , true) ;
-    fw.write("\n" + line) ;
+    fw.write( line + "\n") ;
     fw.close()
   }
 
@@ -33,7 +34,6 @@ class DemoService extends Actor with SprayActorLogging {
 
 
   }
-  var p = new java.io.File("file.txt");
 
   def receive = {
     // when a new connection comes in we register ourselves as the connection handler
@@ -57,12 +57,47 @@ class DemoService extends Actor with SprayActorLogging {
       sender ! FormAdding
 
 
+    case HttpRequest(GET, Uri.Path("/removeName"), _, _ , _) =>
+      sender ! FormRemove
+
+
     case HttpRequest(POST, Uri.Path("/append"),_ , test, _) =>
       appendFile("file.txt",test.asString.substring(5))
       val source = scala.io.Source.fromFile("file.txt")
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
       source.close()
+
+
+    case HttpRequest(POST, Uri.Path("/remove"),_ , test, _) =>
+      val nameToRemove = test.asString.substring(5)
+      var map = new mutable.HashMap[String, String]()
+
+      try{
+        var source = scala.io.Source.fromFile("file.txt")
+        val line = ""
+        for ( line <- source.getLines()){
+          if (line != nameToRemove)
+            map(line) = line
+        }
+        source.close()
+        val pw = new java.io.PrintWriter(new File("file.txt"))
+
+        //pw.write("")
+       // pw.close()
+
+        for (line <- map.iterator){
+          //appendFile("file.txt", line._2)
+          pw.write(line._2 + "\n")
+        }
+        pw.close()
+        source = scala.io.Source.fromFile("file.txt")
+        val lines = source.mkString
+        sender ! HttpResponse(entity = lines)
+
+        source.close()
+      }
+
 
 
   /******************************************************************************/
@@ -173,6 +208,20 @@ class DemoService extends Actor with SprayActorLogging {
       </body>
   </html>.toString()
   )
+  )
+
+
+  lazy val FormRemove = HttpResponse (
+    entity = HttpEntity(`text/html`,
+      <html>
+        <body>
+          <h1>Remove from file</h1>
+          <form name="input" action="/remove" method="post" />
+          Username: <input type="text" name="user" />
+          <input type="submit" value="Submit" />
+        </body>
+      </html>.toString()
+    )
   )
 
   class Streamer(client: ActorRef, count: Int) extends Actor with SprayActorLogging {
