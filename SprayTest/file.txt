@@ -1,0 +1,6 @@
+Five
+strings
+in
+a
+file!
+This line appended to file!alal
