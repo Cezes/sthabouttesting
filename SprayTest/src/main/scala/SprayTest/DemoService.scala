@@ -53,22 +53,18 @@ class DemoService extends Actor with SprayActorLogging {
       source.close()
 
 
-    case HttpRequest(GET, Uri.Path("/append"), _, _, _) =>
-     // val source = scala.io.Source.fromFile("file.txt")
-      val data = Array("Five","strings","in","a","file!")
-     // appendFile("file.txt", "alal")
-     // val lines = source.mkString
+    case HttpRequest(GET, Uri.Path("/addingName"), _, _ , _) =>
       sender ! FormAdding
-    //  sender ! HttpResponse(entity = lines)
-    //  source.close()
 
-    case HttpRequest(GET, Uri.Path("/newfile"),_ , _, _) =>
+
+    case HttpRequest(POST, Uri.Path("/append"),_ , test, _) =>
+      appendFile("file.txt",test.asString.substring(5))
       val source = scala.io.Source.fromFile("file.txt")
-      println(URL.getQuery())
-    // appendFile("file.txt", user)
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
       source.close()
+
+
   /******************************************************************************/
     case HttpRequest(GET, Uri.Path("/stream"), _, _, _) =>
       val peer = sender // since the Props creator is executed asyncly we need to save the sender ref
@@ -158,7 +154,8 @@ class DemoService extends Actor with SprayActorLogging {
           <p>Defined resources:</p>
           <ul>
             <li><a href="/open">/Wyswietl_plik</a></li>
-            <li><a href="/append">/append</a></li>
+            <li><a href="/addingName">/Add Name</a></li>
+            <li><a href="/removeName">/Remove Name</a></li>
           </ul>
         </body>
       </html>.toString()
@@ -170,7 +167,7 @@ class DemoService extends Actor with SprayActorLogging {
   <html>
     <body>
       <h1>Add to file</h1>
-      <form name="input" action="/newfile" method="get" />
+      <form name="input" action="/append" method="post" />
         Username: <input type="text" name="user" />
         <input type="submit" value="Submit" />
       </body>
