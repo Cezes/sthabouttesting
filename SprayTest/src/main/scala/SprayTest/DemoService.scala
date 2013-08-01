@@ -41,13 +41,17 @@ class DemoService extends Actor with SprayActorLogging {
       sender ! index
 
     case HttpRequest(GET, Uri.Path("/plik"), _, _, _) =>
+      sender ! fileOperations
+
+
+    case HttpRequest(GET, Uri.Path("/open"), _, _, _)  =>
       val source = scala.io.Source.fromFile("file.txt")
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
       source.close()
 
 
-    case HttpRequest(GET, Uri.Path("/edytuj"), _, _, _) =>
+    case HttpRequest(GET, Uri.Path("/append"), _, _, _) =>
       val source = scala.io.Source.fromFile("file.txt")
       val data = Array("Five","strings","in","a","file!")
       appendFile("file.txt", "alal")
@@ -101,8 +105,7 @@ class DemoService extends Actor with SprayActorLogging {
           <h1>Say hello to <i>spray-can</i>!</h1>
           <p>Defined resources:</p>
           <ul>
-            <li><a href="/plik">/Wyswietl_plik</a></li>
-            <li><a href="/edytuj">/Edytuj</a></li>
+            <li><a href="/plik">/Plik</a></li>
             <li><a href="/stream">/stream</a></li>
             <li><a href="/server-stats">/server-stats</a></li>
             <li><a href="/crash">/crash</a></li>
@@ -136,7 +139,20 @@ class DemoService extends Actor with SprayActorLogging {
   )
 
 
-
+  lazy val fileOperations = HttpResponse(
+    entity = HttpEntity(`text/html`,
+      <html>
+        <body>
+          <h1>Say hello to <i>spray-can</i>!</h1>
+          <p>Defined resources:</p>
+          <ul>
+            <li><a href="/open">/Wyswietl_plik</a></li>
+            <li><a href="/append">/append</a></li>
+          </ul>
+        </body>
+      </html>.toString()
+    )
+  )
 
   class Streamer(client: ActorRef, count: Int) extends Actor with SprayActorLogging {
     log.debug("Starting streaming response ...")
