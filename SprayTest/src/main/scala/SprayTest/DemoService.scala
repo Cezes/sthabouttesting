@@ -16,6 +16,8 @@ import javax.swing.text.AbstractDocument.Content
 import scala.collection.mutable
 
 
+
+
 class DemoService extends Actor with SprayActorLogging {
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
   import context.dispatcher // ExecutionContext for the futures and scheduler
@@ -62,7 +64,8 @@ class DemoService extends Actor with SprayActorLogging {
 
 
     case HttpRequest(POST, Uri.Path("/append"),_ , test, _) =>
-      appendFile("file.txt",test.asString.substring(5))
+
+      appendFile("file.txt",test.asString)
       val source = scala.io.Source.fromFile("file.txt")
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
@@ -83,8 +86,8 @@ class DemoService extends Actor with SprayActorLogging {
         source.close()
         val pw = new java.io.PrintWriter(new File("file.txt"))
 
-        //pw.write("")
-       // pw.close()
+
+
 
         for (line <- map.iterator){
           //appendFile("file.txt", line._2)
@@ -200,11 +203,37 @@ class DemoService extends Actor with SprayActorLogging {
   lazy val FormAdding = HttpResponse (
   entity = HttpEntity(`text/html`,
   <html>
+    <head>
+      <style type="text/css">
+        <link rel="stylesheet" type="text/css" href="C:\Users\Comarch\Documents\Sprejj\SprayTest\mystyle.css" />
+      </style>
+    </head>
     <body>
       <h1>Add to file</h1>
-      <form name="input" action="/append" method="post" />
-        Username: <input type="text" name="user" />
-        <input type="submit" value="Submit" />
+        <form name="input" action="/append" method="post">
+          <div id ="formWrapper">
+            <label for="firstname">First name</label>
+            <input type ="text" placeholder="First name" name="firstname"></input>
+            <br/>
+
+            <label for="age">Age</label>
+            <input type ="text" placeholder="Age" name="age" ></input>
+            <br/>
+
+            <label for="sex">Sex</label>
+            <input type ="text" placeholder="Sex" name="sex" ></input>
+            <br/>
+
+            <label for="address">Address</label>
+            <input type ="text" placeholder="Address" name="address" ></input>
+            <br/>
+
+           <input type="submit" value="Submit"></input>
+           <input type="reset" value="Reset"></input>
+           <br/>
+
+          </div>
+        </form>
       </body>
   </html>.toString()
   )

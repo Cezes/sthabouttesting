@@ -20,6 +20,13 @@
             <name>Akka Maven Repository</name>
             <url>http://akka.io/repository</url>
         </repository>
+
+        <repository>
+            <id>sprayrepo</id>
+            <name>spray repo</name>
+            <url>http://repo.spray.io/</url>
+        </repository>
+
     </repositories>
     <pluginRepositories>
         <pluginRepository>
@@ -51,23 +58,42 @@
             <artifactId>akka-contrib_2.10</artifactId>
             <version>2.2.0-RC2</version>
         </dependency>
-        <dependency>
-            <groupId>io.spray</groupId>
-            <artifactId>spray-can</artifactId>
-            <version>1.2-M8</version>
-        </dependency>
+
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-http</artifactId>
-            <version>1.2-M8</version>
+            <version>1.1-M7</version>
         </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-httpx</artifactId>
+            <version>1.1-M7</version>
+        </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-util</artifactId>
+            <version>1.1-M7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-can</artifactId>
+            <version>1.1-M8</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-json_2.10.0-RC1</artifactId>
+            <version>1.2.2</version>
+        </dependency>
+
 
 
     </dependencies>
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
-        <testSourceDirectory>src/test/scala</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.scala-tools</groupId>
