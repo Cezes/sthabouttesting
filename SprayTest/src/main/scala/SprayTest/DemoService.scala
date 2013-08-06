@@ -139,6 +139,10 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
     case HttpRequest(GET, Uri.Path("/findBy"), _, _ , _) =>
       sender ! FormFind
 
+    case HttpRequest(GET, Uri.Path("/edit"), _, _, _) =>
+      println("xxx")
+      sender ! FormEdit
+
 
     case HttpRequest(POST, Uri.Path("/append"),_ , test, _) =>
       var data = test.toString
@@ -173,7 +177,7 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
           //appendFile("file.txt", line._2)
           pw.write(line._2 + "\n")
         }
-        pw.close()
+
         source = scala.io.Source.fromFile("file.txt")
         val lines = source.mkString
         sender ! HttpResponse(entity = lines)
@@ -185,7 +189,6 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
 
 
     case HttpRequest(POST, Uri.Path("/find"),_ , test, _) =>
-
       var data = test.toString
       data = data.substring(data.indexOf(',')+1 , data.length -1  )
       val array = data.split("&=".toCharArray)
@@ -209,7 +212,45 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
         source.close()
       }
 
+    case HttpRequest(POST, Uri.Path("/edycja"), _, test, _) =>
 
+      var data = test.toString
+      data = data.substring(data.indexOf(',')+1 , data.length -1  )
+      val array = data.split("&=".toCharArray)
+
+      val jsonPerson = parseToFindPerson(array)
+
+      import MyJsonProtocol._
+
+      var result =""
+      val personToFind = JsonParser(jsonPerson).convertTo[Person]
+      println("Person we are looking for: " + personToFind)
+
+      try{
+        var source = scala.io.Source.fromFile("file.txt")
+
+        for ( line <- source.getLines()){
+          var currentLineResult = findMatch( line, personToFind)
+          if (currentLineResult == "")
+            result = result + line + "\n"
+          currentLineResult =""
+        }
+       source.close()
+
+        val pw = new java.io.PrintWriter(new File("file.txt"))
+
+        pw.write(result)
+
+        pw.close()
+
+
+
+        //sender ! HttpResponse(entity = result)
+
+
+      }
+
+      sender ! FormAdding
 
 
     /******************************************************************************/
@@ -300,9 +341,10 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
           <h1>Say hello to <i>spray-can</i>!</h1>
           <p>Defined resources:</p>
           <ul>
-            <li><a href="/open">/Wyswietl_plik</a></li>
-            <li><a href="/addingName">/Add Name</a></li>
+            <li><a href="/open">/Display file</a></li>
+            <li><a href="/addingName">/Add record</a></li>
             <li><a href="/findBy">/Find by</a></li>
+            <li><a href="/edit">/Edit record</a></li>
             <li><a href="/removeName">/Remove Name</a></li>
           </ul>
         </body>
@@ -377,6 +419,24 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
       </html>.toString()
     )
   )
+
+  lazy val FormEdit = HttpResponse (
+    entity = HttpEntity(`text/html`,
+      <html>
+        <body>
+          <h1>Find record you want to edit </h1>
+          <form name="input" action="/edycja" method="post" />
+          Name: <input type="text" name="name" /> <br/>
+          Age: <input type="text" name="age" /> <br/>
+          Sex: <input type="text" name="sex" /> <br/>
+          Address: <input type="text" name="address" /> <br/>
+          <input type="submit" value="Find" />
+          <br/>
+        </body>
+      </html>.toString()
+    )
+  )
+
 
   class Streamer(client: ActorRef, count: Int) extends Actor with SprayActorLogging {
     log.debug("Starting streaming response ...")
