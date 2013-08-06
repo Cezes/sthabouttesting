@@ -6,7 +6,6 @@ import akka.util.Timeout
 import akka.actor._
 import spray.can.Http
 import spray.can.server.Stats
-import spray.util._
 import spray.http._
 import HttpMethods._
 import MediaTypes._
@@ -14,13 +13,35 @@ import java.io._
 import java.net.URL
 import javax.swing.text.AbstractDocument.Content
 import scala.collection.mutable
+import spray.json.{JsonParser, DefaultJsonProtocol}
+import DefaultJsonProtocol._
+import SprayTest.{MyJsonProtocol, Person}
+import scala.util.parsing.json.{JSONArray, JSONObject}
+import spray.httpx.marshalling._
+import spray.httpx.unmarshalling.{Unmarshaller, pimpHttpEntity}
+import spray.util._
+import spray.http._
 
 
 
-
-class DemoService extends Actor with SprayActorLogging {
+class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol {
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
   import context.dispatcher // ExecutionContext for the futures and scheduler
+
+/*
+  implicit val personFormat = jsonFormat4(Person)
+
+
+  implicit val PersonUnmarshaller =
+    Unmarshaller[Person] {
+      case HttpBody(contentType, buffer) =>
+        // unmarshal from the string format used in the marshaller example
+        val Array(name, age, sex, address) =
+          buffer.asString.split(":,".toCharArray).map(_.trim)
+        Person(name, age.toInt, sex, address)
+    }
+
+*/
 
 
   def appendFile(fileName: String, line: String) = {
@@ -29,13 +50,33 @@ class DemoService extends Actor with SprayActorLogging {
     fw.close()
   }
 
+/*
+  def finder (_ , name :String , _, age : Int , _, sex , _, address) = {
+      var string ="{\"name\" : \""
+      if (name == Nil)
+        string = string + " \", \"age\" : "
+      else
+        string = string + name + "\", \"age\" : "
+      if (age == Nil)
+        string = string + "-1,  \"sex\" : \""
+      else
+        string = string + age + ",  \"sex\" : \""
+      if (sex == Nil)
+        string = string + " \" , \"address\" : \""
+      else
+        string = string + sex + "\" , \"address\" : \""
+      if (address == Nil)
+        string = string + " \"} "
+      else
+        string = string + address + "\"} "
 
-
-  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
-
+      println(string)
 
 
   }
+*/
+
+
 
   def receive = {
     // when a new connection comes in we register ourselves as the connection handler
@@ -62,31 +103,49 @@ class DemoService extends Actor with SprayActorLogging {
     case HttpRequest(GET, Uri.Path("/removeName"), _, _ , _) =>
       sender ! FormRemove
 
+    case HttpRequest(GET, Uri.Path("/findBy"), _, _ , _) =>
+      sender ! FormFind
+
 
     case HttpRequest(POST, Uri.Path("/append"),_ , test, _) =>
+      var data = test.toString
+      data = data.substring(data.indexOf(',')+1 , data.length -1  )
+      val Array(_ , name : String , _, age : String , _, sex : String, _, address : String)  =
+        data.split("=&".toCharArray)
+      val string = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name , age, sex, address)
+    //  val array  =  data.split("=&".toCharArray).map(_.trim)
+     // val p = marshal(Person(array(1).toString, array(3).toInt, array(5).toString, array(7).toString))
 
-      appendFile("file.txt",test.asString)
+    //println(p)
+
+
+    /*    var content = test.asString
+        content = "{ \"" + content.replace("=","\" : \"") + "\" }"
+        content = "\"\"\" " + content.replace("&","\" , \"") + "\"\"\""
+        println(content)
+        val json = JsonParser(content).convertTo[Person]
+        println(content)*/
+      appendFile("file.txt", string)
       val source = scala.io.Source.fromFile("file.txt")
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
       source.close()
 
-
     case HttpRequest(POST, Uri.Path("/remove"),_ , test, _) =>
       val nameToRemove = test.asString.substring(5)
       var map = new mutable.HashMap[String, String]()
 
+      import MyJsonProtocol._
+
       try{
         var source = scala.io.Source.fromFile("file.txt")
-        val line = ""
         for ( line <- source.getLines()){
-          if (line != nameToRemove)
+          println(JsonParser(line).convertTo[Person].name)
+          if (JsonParser(line).convertTo[Person].name != nameToRemove)
             map(line) = line
         }
         source.close()
         val pw = new java.io.PrintWriter(new File("file.txt"))
-
-
 
 
         for (line <- map.iterator){
@@ -103,7 +162,77 @@ class DemoService extends Actor with SprayActorLogging {
 
 
 
-  /******************************************************************************/
+
+    case HttpRequest(POST, Uri.Path("/find"),_ , test, _) =>
+      val valueToFind = test.asString.substring(5)
+      //println("test " + test.toString)
+
+      var data = test.toString
+      data = data.substring(data.indexOf(',')+1 , data.length -1  )
+      val array = data.split("&=".toCharArray)
+
+      println("data " + array.mkString(" "))
+      var string ="{\"name\" : \""
+
+
+      if (array(1) == ""){
+        string = string + " \", \"age\" : "
+      }
+      else
+        string = string + array(1) + "\", \"age\" : "
+
+     println("string po 1: " + string)
+
+      if (array(3) == "")
+        string = string + "-1,  \"sex\" : \""
+      else
+        string = string + array(3) + ",  \"sex\" : \""
+
+      if (array(5) == "")
+        string = string + "\" , \"address\" : \""
+      else
+        string = string + array(5) + "\" , \"address\" : \""
+
+      if (array.length == 8)
+        string = string + array(8) + "\"} "
+      else
+        string = string + "\"} "
+
+     println(array.length)
+    println( string)
+
+
+ /*     val Array(_ , name : String , _, age : String , _, sex : String, _, address : String)  =
+        data.split("&=".toCharArray)
+      val str = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name , age, sex, address)
+
+
+
+
+
+      //val json = JsonParser(str)
+      println("json" + str)*/
+      import MyJsonProtocol._
+      personToFind = JsonParser(string).convertTo[Person]
+      try{
+        var source = scala.io.Source.fromFile("file.txt")
+        var string  = ""
+        for ( line <- source.getLines()){
+          //println(JsonParser(line).convertTo[Person].name)
+          var jsonLine =  JsonParser(line).convertTo[Person]
+          if (JsonParser(line).convertTo[Person].sex == valueToFind)
+             string = string  + line + "\n"
+        }
+
+        sender ! HttpResponse(entity = string)
+
+        source.close()
+      }
+
+
+
+
+    /******************************************************************************/
     case HttpRequest(GET, Uri.Path("/stream"), _, _, _) =>
       val peer = sender // since the Props creator is executed asyncly we need to save the sender ref
       context actorOf Props(new Streamer(peer, 25))
@@ -193,6 +322,7 @@ class DemoService extends Actor with SprayActorLogging {
           <ul>
             <li><a href="/open">/Wyswietl_plik</a></li>
             <li><a href="/addingName">/Add Name</a></li>
+            <li><a href="/findBy">/Find by</a></li>
             <li><a href="/removeName">/Remove Name</a></li>
           </ul>
         </body>
@@ -204,9 +334,7 @@ class DemoService extends Actor with SprayActorLogging {
   entity = HttpEntity(`text/html`,
   <html>
     <head>
-      <style type="text/css">
-        <link rel="stylesheet" type="text/css" href="C:\Users\Comarch\Documents\Sprejj\SprayTest\mystyle.css" />
-      </style>
+        <link rel="stylesheet" type="text/css" href="mystyle.css" ></link>
     </head>
     <body>
       <h1>Add to file</h1>
@@ -221,7 +349,7 @@ class DemoService extends Actor with SprayActorLogging {
             <br/>
 
             <label for="sex">Sex</label>
-            <input type ="text" placeholder="Sex" name="sex" ></input>
+            <input type ="text" placeholder="Male" name="sex" ></input>
             <br/>
 
             <label for="address">Address</label>
@@ -229,13 +357,13 @@ class DemoService extends Actor with SprayActorLogging {
             <br/>
 
            <input type="submit" value="Submit"></input>
-           <input type="reset" value="Reset"></input>
+
            <br/>
 
           </div>
         </form>
       </body>
-  </html>.toString()
+  </html>.toString
   )
   )
 
@@ -248,6 +376,23 @@ class DemoService extends Actor with SprayActorLogging {
           <form name="input" action="/remove" method="post" />
           Username: <input type="text" name="user" />
           <input type="submit" value="Submit" />
+        </body>
+      </html>.toString()
+    )
+  )
+
+  lazy val FormFind = HttpResponse (
+    entity = HttpEntity(`text/html`,
+      <html>
+        <body>
+          <h1>Find by </h1>
+          <form name="input" action="/find" method="post" />
+          Name: <input type="text" name="name" /> <br/>
+          Age: <input type="text" name="age" /> <br/>
+          Sex: <input type="text" name="sex" /> <br/>
+          Address: <input type="text" name="address" /> <br/>
+          <input type="submit" value="Submit" />
+          <br/>
         </body>
       </html>.toString()
     )
