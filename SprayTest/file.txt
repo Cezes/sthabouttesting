@@ -1,3 +1,6 @@
-
-Tomasz
-Mateusz
+{"name" : "Marek" , "age" : 23 , "sex" : "Male" , "address" : "Krakow"}
+{"name" : "Daniel", "age" : 24,  "sex" : "Male" , "address" : "Jakistam2"}
+{"name" : "Tomasz", "age" : 24,  "sex" : "Male" , "address" : "Jakistam2"}
+{"name" : "Ala", "age" : 24,  "sex" : "Female" , "address" : "Jakistam2"}
+{"name" : "Kota", "age" : 24,  "sex" : "Female" , "address" : "Jakistam2"}
+{"name" : "Mateusz", "age" : 19,  "sex" : "Female" , "address" : "A+nie+wiem"} 

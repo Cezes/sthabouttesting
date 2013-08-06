@@ -50,31 +50,64 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
     fw.close()
   }
 
-/*
-  def finder (_ , name :String , _, age : Int , _, sex , _, address) = {
-      var string ="{\"name\" : \""
-      if (name == Nil)
-        string = string + " \", \"age\" : "
-      else
-        string = string + name + "\", \"age\" : "
-      if (age == Nil)
-        string = string + "-1,  \"sex\" : \""
-      else
-        string = string + age + ",  \"sex\" : \""
-      if (sex == Nil)
-        string = string + " \" , \"address\" : \""
-      else
-        string = string + sex + "\" , \"address\" : \""
-      if (address == Nil)
-        string = string + " \"} "
-      else
-        string = string + address + "\"} "
 
-      println(string)
+  def parseToFindPerson ( array: Array[String] ) : String = {
+    var jsonPerson ="{\"name\" : \""
+    println(array.getClass)
 
+    if (array(1) == ""){
+      jsonPerson = jsonPerson + " \", \"age\" : "
+    }
+    else
+      jsonPerson = jsonPerson + array(1) + "\", \"age\" : "
+
+    println("string po 1: " + jsonPerson)
+
+    if (array(3) == "")
+      jsonPerson = jsonPerson + "-1,  \"sex\" : \""
+    else
+      jsonPerson = jsonPerson + array(3) + ",  \"sex\" : \""
+
+    if (array(5) == "")
+      jsonPerson = jsonPerson + "\" , \"address\" : \""
+    else
+      jsonPerson = jsonPerson + array(5) + "\" , \"address\" : \""
+
+    if (array.length == 8)
+      jsonPerson = jsonPerson + array(7) + "\"} "
+    else
+      jsonPerson = jsonPerson + "\"} "
+
+    jsonPerson
+  }
+
+
+  def findMatch(line : String ,  personToFind : Person ) : String = {
+    import MyJsonProtocol._
+    var currentLine =  JsonParser(line).convertTo[Person]
+    var currentLineResult =  line + "\n"
+
+    //var string =""
+    if (personToFind.name == " " ){
+    }
+    else if (currentLine.name != personToFind.name)
+      currentLineResult =""
+    if (personToFind.age ==  -1 ) {
+    }
+    else if(currentLine.age != personToFind.age)
+      currentLineResult =""
+    if (personToFind.sex == ""  ){
+    }
+    else if (currentLine.sex != personToFind.sex)
+      currentLineResult = ""
+    if (personToFind.address == ""  ){
+    }
+    else if (currentLine.address != personToFind.address)
+      currentLineResult =""
+
+    currentLineResult
 
   }
-*/
 
 
 
@@ -112,20 +145,8 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
       data = data.substring(data.indexOf(',')+1 , data.length -1  )
       val Array(_ , name : String , _, age : String , _, sex : String, _, address : String)  =
         data.split("=&".toCharArray)
-      val string = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name , age, sex, address)
-    //  val array  =  data.split("=&".toCharArray).map(_.trim)
-     // val p = marshal(Person(array(1).toString, array(3).toInt, array(5).toString, array(7).toString))
-
-    //println(p)
-
-
-    /*    var content = test.asString
-        content = "{ \"" + content.replace("=","\" : \"") + "\" }"
-        content = "\"\"\" " + content.replace("&","\" , \"") + "\"\"\""
-        println(content)
-        val json = JsonParser(content).convertTo[Person]
-        println(content)*/
-      appendFile("file.txt", string)
+      val jsonToAppend = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name , age, sex, address)
+      appendFile("file.txt", jsonToAppend)
       val source = scala.io.Source.fromFile("file.txt")
       val lines = source.mkString
       sender ! HttpResponse(entity = lines)
@@ -164,67 +185,26 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
 
 
     case HttpRequest(POST, Uri.Path("/find"),_ , test, _) =>
-      val valueToFind = test.asString.substring(5)
-      //println("test " + test.toString)
 
       var data = test.toString
       data = data.substring(data.indexOf(',')+1 , data.length -1  )
       val array = data.split("&=".toCharArray)
 
-      println("data " + array.mkString(" "))
-      var string ="{\"name\" : \""
+      val jsonPerson = parseToFindPerson(array)
 
-
-      if (array(1) == ""){
-        string = string + " \", \"age\" : "
-      }
-      else
-        string = string + array(1) + "\", \"age\" : "
-
-     println("string po 1: " + string)
-
-      if (array(3) == "")
-        string = string + "-1,  \"sex\" : \""
-      else
-        string = string + array(3) + ",  \"sex\" : \""
-
-      if (array(5) == "")
-        string = string + "\" , \"address\" : \""
-      else
-        string = string + array(5) + "\" , \"address\" : \""
-
-      if (array.length == 8)
-        string = string + array(8) + "\"} "
-      else
-        string = string + "\"} "
-
-     println(array.length)
-    println( string)
-
-
- /*     val Array(_ , name : String , _, age : String , _, sex : String, _, address : String)  =
-        data.split("&=".toCharArray)
-      val str = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name , age, sex, address)
-
-
-
-
-
-      //val json = JsonParser(str)
-      println("json" + str)*/
       import MyJsonProtocol._
-      personToFind = JsonParser(string).convertTo[Person]
+      val personToFind = JsonParser(jsonPerson).convertTo[Person]
+      println("Person we are looking for: " + personToFind)
       try{
         var source = scala.io.Source.fromFile("file.txt")
-        var string  = ""
+        var result = ""
         for ( line <- source.getLines()){
-          //println(JsonParser(line).convertTo[Person].name)
-          var jsonLine =  JsonParser(line).convertTo[Person]
-          if (JsonParser(line).convertTo[Person].sex == valueToFind)
-             string = string  + line + "\n"
+          var currentLineResult = findMatch( line, personToFind)
+          result = result + currentLineResult
+          currentLineResult =""
         }
 
-        sender ! HttpResponse(entity = string)
+        sender ! HttpResponse(entity = result)
 
         source.close()
       }
