@@ -1,6 +1,6 @@
 package Spray1
 
-import scala.concurrent.duration._
+/*import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor._
@@ -20,9 +20,223 @@ import scala.util.parsing.json.{JSONArray, JSONObject}
 import spray.httpx.marshalling._
 import spray.httpx.unmarshalling.{Unmarshaller, pimpHttpEntity}
 import spray.util._
+import scalax.io._*/
+
+import java.io.File
+import org.parboiled.common.FileUtils
+import scala.concurrent.duration._
+import akka.actor.{Props, Actor}
+import akka.pattern.ask
+import spray.routing.{HttpService, RequestContext}
+import spray.routing.directives.CachingDirectives
+import spray.can.server.Stats
+import spray.can.Http
+import spray.httpx.marshalling.Marshaller
+import spray.httpx.encoding.Gzip
+import spray.util._
 import spray.http._
+import MediaTypes._
+import spray.routing.directives.CachingDirectives._
 
 
+// we don't implement our route structure directly in the service actor because
+// we want to be able to test it independently, without having to spin up an actor
+class DemoServiceActor extends Actor with DemoService {
+
+  // the HttpService trait defines only one abstract member, which
+  // connects the services environment to the enclosing actor or test
+  def actorRefFactory = context
+
+  // this actor only runs our route, but you could add
+  // other things here, like request stream processing,
+  // timeout handling or alternative handler registration
+  def receive = runRoute(demoRoute)
+}
+
+// this trait defines our service behavior independently from the service actor
+trait DemoService extends HttpService{
+
+  // we use the enclosing ActorContext's or ActorSystem's dispatcher for our Futures and Scheduler
+  implicit def executionContext = actorRefFactory.dispatcher
+
+  val demoRoute = {
+    get{
+      path("") {
+        complete(index)
+      }~
+      path("plik") {
+        path(""){
+          complete(fileOperations)
+        }
+      }~
+      path("open"){
+        val source = scala.io.Source.fromFile("file.txt")
+        val lines = source.mkString
+        source.close()
+        println("resource " + getFromResource("file.txt"))
+        complete(lines)
+      }~
+      path("findBy"){
+        complete(FormFind)
+      }~
+       path("stats") {
+          complete {
+            actorRefFactory.actorFor("/user/IO-HTTP/listener-0")
+              .ask(Http.GetStats)(1.second)
+              .mapTo[Stats]
+          }
+        } ~
+        path("timeout") { ctx =>
+          // we simply let the request drop to provoke a timeout
+        } ~
+        path("crash") { ctx =>
+          sys.error("crash boom bang")
+        } ~
+        path("fail") {
+          failWith(new RuntimeException("aaaahhh"))
+        }
+    } ~
+      (post | parameter('method ! "post")) {
+        path("stop") {
+          complete {
+            in(1.second){ actorSystem.shutdown() }
+            "Shutting down in 1 second..."
+          }
+        }~
+          path("find"){
+          complete("Pong !")
+        }
+      }
+  }
+  //lazy val simpleRouteCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
+
+  lazy val index =
+    <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+      <body>
+        <h1>Say hello to <i>spray-routing</i> on <i>spray-can</i>!</h1>
+        <p>Defined resources:</p>
+        <ul>
+          <li><a href="/plik">/plik</a></li>
+          <li><a href="/stats">/stats</a></li>
+          <li><a href="/timeout">/timeout</a></li>
+          <li><a href="/crash">/crash</a></li>
+          <li><a href="/fail">/fail</a></li>
+          <li><a href="/stop?method=post">/stop</a></li>
+        </ul>
+      </body>
+    </html>
+
+
+  lazy val fileOperations =
+    <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+        <body>
+          <h1>Say hello to <i>spray-can</i>!</h1>
+          <p>Defined operations:</p>
+          <ul>
+            <li><a href="/open">/Display file</a></li>
+            <li><a href="/addingName">/Add record</a></li>
+            <li><a href="/findBy">/Find by</a></li>
+            <li><a href="/edit">/Edit record</a></li>
+            <li><a href="/removeName">/Remove record</a></li>
+          </ul>
+        </body>
+      </html>
+
+
+  lazy val FormAdding =
+      <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+        <head>
+          <link rel="stylesheet" type="text/css" href="mystyle.css" ></link>
+        </head>
+        <body>
+          <h1>Add to file</h1>
+          <form name="input" action="/append" method="post">
+            <div id ="formWrapper">
+              <label for="firstname">First name</label>
+              <input type ="text" placeholder="First name" name="firstname"></input>
+              <br/>
+
+              <label for="age">Age</label>
+              <input type ="text" placeholder="Age" name="age" ></input>
+              <br/>
+
+              <label for="sex">Sex</label>
+              <input type ="text" placeholder="Male" name="sex" ></input>
+              <br/>
+
+              <label for="address">Address</label>
+              <input type ="text" placeholder="Address" name="address" ></input>
+              <br/>
+
+              <input type="submit" value="Submit"></input>
+
+              <br/>
+
+            </div>
+          </form>
+        </body>
+      </html>
+
+
+  lazy val FormRemove =
+      <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+        <body>
+          <h1>Remove from file</h1>
+          <form name="input" action="/remove" method="post" />
+          Username: <input type="text" name="user" />
+          <input type="submit" value="Submit" />
+        </body>
+      </html>
+
+
+  lazy val FormFind =
+      <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+        <body>
+          <h1>Find by </h1>
+          <form name="input" action="/find" method="post" />
+          Name: <input type="text" name="name" /> <br/>
+          Age: <input type="text" name="age" /> <br/>
+          Sex: <input type="text" name="sex" /> <br/>
+          Address: <input type="text" name="address" /> <br/>
+          <input type="submit" value="Find" />
+          <br/>
+        </body>
+      </html>
+
+  lazy val FormEdit =
+      <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
+        <body>
+          <h1>Find record you want to edit </h1>
+          <form name="input" action="/edycja" method="post" />
+          Name: <input type="text" name="name" /> <br/>
+          Age: <input type="text" name="age" /> <br/>
+          Sex: <input type="text" name="sex" /> <br/>
+          Address: <input type="text" name="address" /> <br/>
+          <input type="submit" value="Find" />
+          <br/>
+        </body>
+      </html>
+
+
+
+  implicit val statsMarshaller: Marshaller[Stats] =
+    Marshaller.delegate[Stats, String](ContentTypes.`text/plain`) { stats =>
+      "Uptime                : " + stats.uptime.formatHMS + '\n' +
+        "Total requests        : " + stats.totalRequests + '\n' +
+        "Open requests         : " + stats.openRequests + '\n' +
+        "Max open requests     : " + stats.maxOpenRequests + '\n' +
+        "Total connections     : " + stats.totalConnections + '\n' +
+        "Open connections      : " + stats.openConnections + '\n' +
+        "Max open connections  : " + stats.maxOpenConnections + '\n' +
+        "Requests timed out    : " + stats.requestTimeouts + '\n'
+    }
+
+
+  def in[U](duration: FiniteDuration)(body: => U): Unit =
+    actorSystem.scheduler.scheduleOnce(duration)(body)
+}
+
+/*
 
 class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol {
   implicit val timeout: Timeout = 1.second // for the actor 'asks'
@@ -188,8 +402,20 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
 
 
 
-    case HttpRequest(POST, Uri.Path("/find"),_ , test, _) =>
+    case HttpRequest(POST, Uri.Path("/find"),  _ , test, _) =>
+/*      val entity = test.getEntity
+      var content =""
+      if (entity != null) {
+        val inputStream = entity.getContent
+        content = io.Source.fromInputStream(inputStream).getLines.mkString
+        inputStream.close
+      }*/
+
+
       var data = test.toString
+      println("test" + test.buffer.mkString(" "))
+      println(data)
+      println(Uri.toString())
       data = data.substring(data.indexOf(',')+1 , data.length -1  )
       val array = data.split("&=".toCharArray)
 
@@ -345,7 +571,7 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
             <li><a href="/addingName">/Add record</a></li>
             <li><a href="/findBy">/Find by</a></li>
             <li><a href="/edit">/Edit record</a></li>
-            <li><a href="/removeName">/Remove Name</a></li>
+            <li><a href="/removeName">/Remove record</a></li>
           </ul>
         </body>
       </html>.toString()
@@ -465,4 +691,4 @@ class DemoService extends Actor with SprayActorLogging with DefaultJsonProtocol 
     // simple case class whose instances we use as send confirmation message for streaming chunks
     case class Ok(remaining: Int)
   }
-}
+}*/

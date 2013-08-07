@@ -62,23 +62,30 @@
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-http</artifactId>
-            <version>1.1-M7</version>
+            <version>1.2-M8</version>
         </dependency>
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-httpx</artifactId>
-            <version>1.1-M7</version>
+            <version>1.2-M8</version>
         </dependency>
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-util</artifactId>
-            <version>1.1-M7</version>
+            <version>1.2-M8</version>
         </dependency>
 
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-can</artifactId>
-            <version>1.1-M8</version>
+            <version>1.2-M8</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-routing</artifactId>
+            <version>1.2-M8</version>
         </dependency>
 
 
@@ -86,6 +93,13 @@
             <groupId>io.spray</groupId>
             <artifactId>spray-json_2.10.0-RC1</artifactId>
             <version>1.2.2</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.scalaforge</groupId>
+            <artifactId>scalax</artifactId>
+            <version>0.1</version>
         </dependency>
 
 
