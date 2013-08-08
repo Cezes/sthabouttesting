@@ -67,7 +67,7 @@ trait DemoService extends HttpService{
   val demoRoute = {
     handleRejections(myHandler) {
       allowCrossDomain {
-    get{
+    (get | put) {
       path("") {
         complete(index)
       }~
@@ -89,7 +89,7 @@ trait DemoService extends HttpService{
           }~
            path("edit"){
              respondWithMediaType(`text/html`)(complete(FormEdit))
-           } ~
+           }~
             path(""){
             complete(fileOperations)
           }
@@ -146,7 +146,59 @@ trait DemoService extends HttpService{
                 }
                 complete(result)
             }
-        } ~
+        }~
+              path("edite"){
+                formFields(
+                 'name,
+                 'newName,
+                 'age,
+                 'newAge,
+                 'sex,
+                 'newSex,
+                 'address,
+                 'newAddress)
+                {
+                  (name , newName, age, newAge, sex, newSex, address, newAddress) =>
+
+                    println("name " + name + " sex " + sex + " address " + address)
+                    import MyJsonProtocol._
+                    var temp = 0
+                    if (age.isEmpty ){
+                      temp = -1
+                    }
+                    else  { temp = age.toInt }
+
+                    val personToEdit = Person(name, temp, sex, address)
+                    var result = ""
+                   try{
+                     var source = scala.io.Source.fromFile("file.txt")
+                     for( line <- source.getLines()){
+                       var currentLineResult = findMatch( line, personToEdit)
+                       if ( currentLineResult.isEmpty){
+                         if (result.isEmpty)
+                           result = line
+                         else result = result + "\n" + line
+                       }
+                       else {
+                         var temporary = 0
+                         if (newAge.isEmpty ){
+                           temporary = -1
+                         }
+                         else  { temporary = age.toInt }
+                         if (result.isEmpty)
+                           result = editPerson(line , Person(newName, temporary, newSex, newAddress))
+                         else result = result + editPerson(line , Person(newName, temporary, newSex, newAddress))
+                       }
+
+                     }
+                      source.close()
+                     val pw = new java.io.PrintWriter(new File("file.txt"))
+                     pw.write(result)
+                     pw.close()
+                     complete(result)
+                   }
+                }
+              }~
         path("append"){
           formFields(
             'firstname ,
@@ -214,6 +266,10 @@ trait DemoService extends HttpService{
        }
     }
      }~
+      (put | parameter('method ! "put")){
+
+        complete("put")
+      }~
       pathPrefix("api") {
       path("api-docs") {
         val source = scala.io.Source.fromFile("api-docs.json")
@@ -225,7 +281,8 @@ trait DemoService extends HttpService{
     }
   }
  }
-}
+  }
+
   //lazy val simpleRouteCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
   lazy val index =
@@ -325,11 +382,15 @@ trait DemoService extends HttpService{
       <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
         <body>
           <h1>Find record you want to edit </h1>
-          <form name="input" action="/plik/edycja" method="put" />
-          Name: <input type="text" name="name" /> <br/>
-          Age: <input type="text" name="age" /> <br/>
-          Sex: <input type="text" name="sex" /> <br/>
-          Address: <input type="text" name="address" /> <br/>
+          <form name="input" action="/plik/edite" method="post" />
+          Name: <input type="text" name="name" />
+          New Name: <input type="text" name="newName" /> <br/>
+          Age: <input type="text" name="age" />
+          New Age: <input type="text" name="newAge" /><br/>
+          Sex: <input type="text" name="sex" />
+          New Sex: <input type="text" name="newSex" /><br/>
+          Address: <input type="text" name="address" />
+          New Address: <input type="text" name="newAddress" /><br/>
           <input type="submit" value="Find" />
           <br/>
         </body>
@@ -389,6 +450,32 @@ trait DemoService extends HttpService{
 
     currentLineResult
 
+  }
+
+  def editPerson(line : String ,  personToEdit : Person ) : String = {
+    import MyJsonProtocol._
+    var currentLine =  JsonParser(line).convertTo[Person]
+    println(personToEdit)
+    var name = personToEdit.name
+    var age = personToEdit.age
+    var sex = personToEdit.name
+    var address = personToEdit.address
+    //var string =""
+    println(personToEdit)
+    if (personToEdit.name.isEmpty ){
+       name = currentLine.name
+    }
+    if (personToEdit.age ==  -1 ) {
+       age = currentLine.age
+    }
+    if (personToEdit.sex.isEmpty  ){
+       sex = currentLine.sex
+       println("Edit person" + currentLine)
+    }
+    if (personToEdit.address.isEmpty  ){
+       address = currentLine.address
+    }
+    "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(name, age, sex, address)
   }
   def appendFile(fileName: String, line: String) = {
     val fw = new FileWriter(fileName , true) ;
