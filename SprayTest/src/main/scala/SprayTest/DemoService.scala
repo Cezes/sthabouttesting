@@ -39,6 +39,7 @@ import MediaTypes._
 import spray.routing.directives.CachingDirectives._
 import spray.http.HttpHeaders.RawHeader
 import spray.routing._
+import scala.concurrent.Future
 
 // we don't implement our route structure directly in the service actor because
 // we want to be able to test it independently, without having to spin up an actor
@@ -67,20 +68,21 @@ trait DemoService extends HttpService{
       path("") {
         complete(index)
       }~
-      path("plik") {
-        path(""){
-          complete(fileOperations)
-        }
-      }~
-      path("open"){
-        val source = scala.io.Source.fromFile("file.txt")
-        val lines = source.mkString
-        source.close()
-        println("resource " + getFromResource("file.txt"))
-        complete(lines)
-      }~
-      path("findBy"){
-        complete(FormFind)
+      pathPrefix("plik") {
+          path("open"){
+            val source = scala.io.Source.fromFile("file.txt")
+            val lines = source.mkString
+            source.close()
+            complete(lines)
+          }~
+          path("findBy"){
+           // println(FormFind.text)
+           // println(FormFind.toList.mkString(" "))
+           respondWithMediaType(`text/html`)(complete(FormFind))
+          }~
+            path(""){
+            complete(fileOperations)
+          }
       }~
        path("stats") {
           complete {
@@ -108,6 +110,12 @@ trait DemoService extends HttpService{
         }~
           path("find"){
           complete("Pong !")
+        }~
+        path("addingName"){
+          complete(FormAdding)
+        }~
+        path("append"){
+          complete("pong !")
         }
       } ~
      pathPrefix("api") {
@@ -147,11 +155,11 @@ trait DemoService extends HttpService{
           <h1>Say hello to <i>spray-can</i>!</h1>
           <p>Defined operations:</p>
           <ul>
-            <li><a href="/open">/Display file</a></li>
-            <li><a href="/addingName">/Add record</a></li>
-            <li><a href="/findBy">/Find by</a></li>
-            <li><a href="/edit">/Edit record</a></li>
-            <li><a href="/removeName">/Remove record</a></li>
+            <li><a href="/plik/open">/Display file</a></li>
+            <li><a href="/plik/addingName">/Add record</a></li>
+            <li><a href="/plik/findBy">/Find by</a></li>
+            <li><a href="/plik/edit">/Edit record</a></li>
+            <li><a href="/plik/removeName">/Remove record</a></li>
           </ul>
         </body>
       </html>
