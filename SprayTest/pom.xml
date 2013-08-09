@@ -102,7 +102,19 @@
             <version>0.1</version>
         </dependency>
 
+        <!-- Core -->
+        <dependency>
+            <groupId>com.github.scala-incubator.io</groupId>
+            <artifactId>scala-io-core_2.10</artifactId>
+            <version>0.4.2</version>
+        </dependency>
 
+        <!-- File -->
+        <dependency>
+            <groupId>com.github.scala-incubator.io</groupId>
+            <artifactId>scala-io-file_2.10</artifactId>
+            <version>0.4.2</version>
+        </dependency>
 
     </dependencies>
 

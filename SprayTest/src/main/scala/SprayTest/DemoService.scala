@@ -23,6 +23,9 @@ import SprayTest.{MyJsonProtocol, Person}
 import spray.json.JsonParser
 import scala.collection.parallel.mutable
 import scala.annotation.{Annotation, StaticAnnotation}
+import scalax.io._
+
+
 
 case class APIInfo(
                     description: String
@@ -154,35 +157,55 @@ trait DemoService extends HttpService{
                       temp = -1
                     }
                     else  { temp = age.toInt }
-
+                    var temporary = 0
+                    val file: Seekable =  Resource.fromFile("file.txt")
+                    var position = 0
                     val personToEdit = Person(name, temp, sex, address)
-                    var result = ""
+                    //var result = ""
                    try{
-                     var source = scala.io.Source.fromFile("file.txt")
-                     for( line <- source.getLines()){
-                       var currentLineResult = findMatch( line, personToEdit)
+                     //var source = scala.io.Source.fromFile("file.txt")
+                     val fileLenght = file.lines().mkString.length
+                     var offset = 0
+                     for( line <- file.lines()){
+                       println(line)
+                       var currentLineResult = ""
+                       if ( position + line.length <= fileLenght){
+                          currentLineResult = findMatch( line, personToEdit)}
+                       else{
+                          currentLineResult = findMatch ( line.substring(0, (line.length-offset)), personToEdit )}
                        if ( currentLineResult.isEmpty){
-                         if (result.isEmpty)
-                           result = line
-                         else result = result + "\n" + line
+                         position = position + line.length + 1
                        }
                        else {
-                         var temporary = 0
+
                          if (newAge.isEmpty ){
                            temporary = -1
                          }
                          else  { temporary = newAge.toInt }
-                         if (result.isEmpty)
-                           result = editPerson(line , Person(newName, temporary, newSex, newAddress))
-                         else result = result + "\n" + editPerson(line , Person(newName, temporary, newSex, newAddress))
+
+                         val newLine =  editPerson(line , Person(newName, temporary, newSex, newAddress))
+                         file.patch(position , newLine , OverwriteSome(line.length))
+                         file.string
+                         if ( newLine.length > line.length)
+                           offset = offset + (newLine.length - line.length)
+                         position = position + newLine.length + 1
+
                        }
+                       val source = scala.io.Source.fromFile("file.txt")
+                       val lines = source.mkString
+                       println( '\n' + lines + "\n")
+                       source.close()
 
                      }
-                      source.close()
-                     val pw = new java.io.PrintWriter(new File("file.txt"))
-                     pw.write(result)
-                     pw.close()
-                     complete(result) : @APIInfo(description = "Edit file")
+                     file.patch(position , "" , OverwriteAll)
+                     // source.close()
+                     //val pw = new java.io.PrintWriter(new File("file.txt"))
+                     //pw.write(result)
+                     //pw.close()
+                     val source = scala.io.Source.fromFile("file.txt")
+                     val lines = source.mkString
+                     source.close()
+                     complete(lines) : @APIInfo(description = "Edit file")
                    }
                 }
               }~
@@ -195,13 +218,9 @@ trait DemoService extends HttpService{
           {
             (firstname, age, sex, address) =>
 
-
-      //    var data = test.toString
-        //  data = data.substring(data.indexOf(',')+1 , data.length -1  )
-       ///   val Array(_ , name : String , _, age : String , _, sex : String, _, address : String)  =
-       //    data.split("=&".toCharArray)
           val jsonToAppend = "{\"name\" : \"%s\", \"age\" : %s,  \"sex\" : \"%s\" , \"address\" : \"%s\"} ".format(firstname , age, sex, address)
-          appendFile("file.txt", jsonToAppend)
+          val file: Seekable =  Resource.fromFile("file.txt")
+          file.append("\n" + jsonToAppend)
           val source = scala.io.Source.fromFile("file.txt")
           val lines = source.mkString
           source.close()
@@ -212,42 +231,24 @@ trait DemoService extends HttpService{
        path("remove"){
            formFields('user) {
              (user) => {
-              //println(user)
-              //println(user.toString)
-           val nameToRemove = user.toString
-         //      println(user)
-           var map = scala.collection.mutable.HashMap[String, String]()
-
+           val nameToRemove = user
+           val file: Seekable =  Resource.fromFile(new File("file.txt"))
            import MyJsonProtocol._
-           var lines  =""
+           var position = 0
            try{
-             var source = scala.io.Source.fromFile("file.txt")
-             for ( line <- source.getLines()){
-               //println(JsonParser(line).convertTo[Person])
-               if (JsonParser(line).convertTo[Person].name != nameToRemove)
-                 map(line) = line
-               //println(line)
-             }
-             source.close()
-             val pw = new java.io.PrintWriter(new File("file.txt"))
-
-             //println(map.mkString(" "))
-             var it = 0
-             for (line <- map.iterator){
-               //appendFile("file.txt", line._2)
-               if ( map.size > it ){
-                pw.write(line._2 + "\n")
+             //var source = scala.io.Source.fromFile("file.txt")
+             for ( line <- file.lines()){
+               if (JsonParser(line).convertTo[Person].name.equals(nameToRemove)){
+                  file.patch(position, "", OverwriteSome(line.length))
+                  println(line)
+               }  else {
+                   position = position + line.length
                }
-               else pw.write(line._2)
-
-               it = it + 1
-              }
-
-             pw.close()
-             source = scala.io.Source.fromFile("file.txt")
-             lines = source.mkString
-             source.close()
+             }
            }
+           val source = scala.io.Source.fromFile("file.txt")
+           val lines = source.mkString
+           source.close()
            complete(lines) : @APIInfo(description = "Removing entry from file")
          }
        }
