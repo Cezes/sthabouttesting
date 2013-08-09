@@ -187,7 +187,7 @@ trait DemoService extends HttpService{
                          else  { temporary = age.toInt }
                          if (result.isEmpty)
                            result = editPerson(line , Person(newName, temporary, newSex, newAddress))
-                         else result = result + editPerson(line , Person(newName, temporary, newSex, newAddress))
+                         else result = result + "\n" + editPerson(line , Person(newName, temporary, newSex, newAddress))
                        }
 
                      }
@@ -458,7 +458,7 @@ trait DemoService extends HttpService{
     println(personToEdit)
     var name = personToEdit.name
     var age = personToEdit.age
-    var sex = personToEdit.name
+    var sex = personToEdit.sex
     var address = personToEdit.address
     //var string =""
     println(personToEdit)
