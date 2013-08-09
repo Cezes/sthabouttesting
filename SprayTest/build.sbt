@@ -26,6 +26,8 @@ seq(Revolver.settings: _*)
 
 libraryDependencies ++= Seq(
   "io.spray"            %   "spray-can"     % "1.2-M8",
+  "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.2",
+  "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.2",
   "io.spray"            %   "spray-routing" % "1.2-M8",
   "io.spray"            %   "spray-testkit" % "1.2-M8",
   "com.typesafe.akka"   %%  "akka-actor"    % "2.2.0-RC1",
