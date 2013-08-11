@@ -161,18 +161,18 @@ trait DemoService extends HttpService{
                     val file: Seekable =  Resource.fromFile("file.txt")
                     var position = 0
                     val personToEdit = Person(name, temp, sex, address)
-                    //var result = ""
                    try{
-                     //var source = scala.io.Source.fromFile("file.txt")
                      val fileLenght = file.lines().mkString.length
                      var offset = 0
                      for( line <- file.lines()){
-                       println(line)
                        var currentLineResult = ""
+                       println(line)
                        if ( position + line.length <= fileLenght){
                           currentLineResult = findMatch( line, personToEdit)}
                        else{
-                          currentLineResult = findMatch ( line.substring(0, (line.length-offset)), personToEdit )}
+                          val linesubstring = line.substring(0, (line.length - offset))
+                          if ( linesubstring.isEmpty == false)
+                            currentLineResult = findMatch ( line.substring(0, (line.length-offset)), personToEdit )}
                        if ( currentLineResult.isEmpty){
                          position = position + line.length + 1
                        }
@@ -191,21 +191,12 @@ trait DemoService extends HttpService{
                          position = position + newLine.length + 1
 
                        }
-                       val source = scala.io.Source.fromFile("file.txt")
-                       val lines = source.mkString
-                       println( '\n' + lines + "\n")
-                       source.close()
-
                      }
-                     file.patch(position , "" , OverwriteAll)
-                     // source.close()
-                     //val pw = new java.io.PrintWriter(new File("file.txt"))
-                     //pw.write(result)
-                     //pw.close()
+                     //file.patch(position , "" , OverwriteAll)
                      val source = scala.io.Source.fromFile("file.txt")
                      val lines = source.mkString
                      source.close()
-                     complete(lines) : @APIInfo(description = "Edit file")
+                     complete(lines) : @APIInfo(description = "Editing records in false based on specified cryteria")
                    }
                 }
               }~
@@ -224,7 +215,7 @@ trait DemoService extends HttpService{
           val source = scala.io.Source.fromFile("file.txt")
           val lines = source.mkString
           source.close()
-          complete(lines) : @APIInfo(description = "Adding new entry to file")
+          complete(lines) : @APIInfo(description = "Adding new record at the end of a file")
          }
         }
       } ~
@@ -249,7 +240,7 @@ trait DemoService extends HttpService{
            val source = scala.io.Source.fromFile("file.txt")
            val lines = source.mkString
            source.close()
-           complete(lines) : @APIInfo(description = "Removing entry from file")
+           complete(lines) : @APIInfo(description = "Removing record from a file")
          }
        }
     }
