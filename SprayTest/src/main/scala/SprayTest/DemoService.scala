@@ -25,6 +25,8 @@ import scala.collection.parallel.mutable
 import scala.annotation.{Annotation, StaticAnnotation}
 import scalax.io._
 import SprayTest.Person
+import StatusCodes._
+import Directives._
 
 
 
@@ -58,7 +60,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
   val demoRoute = {
     handleRejections(myHandler) {
       allowCrossDomain {
-    (get | put) {
+    (get | put | parameter('method ! "put" )) {
       path("") {
         complete(index)
       }~
@@ -81,6 +83,57 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
            path("edit"){
              respondWithMediaType(`text/html`)(complete(FormEdit)) : @APIInfo(description = "Showing form for editing entry in file")
            }~
+            path("find"){
+
+              parameter('name ,
+                'age,
+                'sex ,
+                'address )
+              {
+                (name, age, sex, address) =>
+                  var temp = 0
+                  if (age.isEmpty ){
+                    temp = -1
+                  }
+                  else  { temp = age.toInt }
+                  var person = Person(name,temp,sex,address)
+                  var result = ""
+                  try{
+                    var source = scala.io.Source.fromFile("file.txt")
+                    for ( line <- source.getLines()){
+                      var currentLineResult = findMatch( line, person)
+                      result = result + currentLineResult
+                      currentLineResult =""
+                    }
+
+                    source.close()
+                  }
+                  complete(result)  : @APIInfo(description = "Find entry based on specified criteria")
+              }
+            }~
+            pathPrefix("remove"){
+              formFields('user) {
+                (user) => {
+                  val nameToRemove = user
+                  val file: Seekable =  Resource.fromFile(new File("file.txt"))
+                  var position = 0
+                  try{
+                    for ( line <- file.lines()){
+                      if (JsonParser(line).convertTo[Person].name.equals(nameToRemove)){
+                        file.patch(position, "", OverwriteSome(line.length))
+                        println(line)
+                      }  else {
+                        position = position + line.length
+                      }
+                    }
+                  }
+                  val source = scala.io.Source.fromFile("file.txt")
+                  val lines = source.mkString
+                  source.close()
+                  complete(lines) : @APIInfo(description = "Removing record from a file")
+                }
+              }
+            }~
             path(""){
             complete(fileOperations) : @APIInfo(description = "Showing all possible operations which can be performed on provided file")
           }
@@ -110,95 +163,6 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
           }   : @APIInfo(description = "Shutting down server on demand")
         }~
          pathPrefix("plik"){
-            path("find"){
-            formFields(
-              'name ,
-              'age,
-              'sex ,
-              'address )
-            {
-              (name, age, sex, address) =>
-                var temp = 0
-                if (age.isEmpty ){
-                  temp = -1
-                }
-                else  { temp = age.toInt }
-                var person = Person(name,temp,sex,address)
-                var result = ""
-                try{
-                  var source = scala.io.Source.fromFile("file.txt")
-                  for ( line <- source.getLines()){
-                    var currentLineResult = findMatch( line, person)
-                    result = result + currentLineResult
-                    currentLineResult =""
-                  }
-
-                  source.close()
-                }
-                complete(result)  : @APIInfo(description = "Find entry based on specified criteria")
-            }
-        }~
-              path("edite"){
-                formFields(
-                 'name,
-                 'newName,
-                 'age,
-                 'newAge,
-                 'sex,
-                 'newSex,
-                 'address,
-                 'newAddress)
-                {
-                  (name , newName, age, newAge, sex, newSex, address, newAddress) =>
-
-                    println("name " + name + " sex " + sex + " address " + address)
-                    var temp = 0
-                    if (age.isEmpty ){
-                      temp = -1
-                    }
-                    else  { temp = age.toInt }
-                    var temporary = 0
-                    val file: Seekable =  Resource.fromFile("file.txt")
-                    var position = 0
-                    val personToEdit = Person(name, temp, sex, address)
-                   try{
-                     val fileLenght = file.lines().mkString.length
-                     var offset = 0
-                     for( line <- file.lines()){
-                       var currentLineResult = ""
-                       println(line)
-                       if ( position + line.length <= fileLenght){
-                          currentLineResult = findMatch( line, personToEdit)}
-                       else{
-                          val linesubstring = line.substring(0, (line.length - offset))
-                          if ( linesubstring.isEmpty == false)
-                            currentLineResult = findMatch ( line.substring(0, (line.length-offset)), personToEdit )}
-                       if ( currentLineResult.isEmpty){
-                         position = position + line.length + 1
-                       }
-                       else {
-
-                         if (newAge.isEmpty ){
-                           temporary = -1
-                         }
-                         else  { temporary = newAge.toInt }
-
-                         val newLine =  editPerson(line , Person(newName, temporary, newSex, newAddress))
-                         file.patch(position , newLine , OverwriteSome(line.length))
-                         file.string
-                         if ( newLine.length > line.length)
-                           offset = offset + (newLine.length - line.length)
-                         position = position + newLine.length + 1
-
-                       }
-                     }
-                     val source = scala.io.Source.fromFile("file.txt")
-                     val lines = source.mkString
-                     source.close()
-                     complete(lines) : @APIInfo(description = "Editing records in false based on specified cryteria")
-                   }
-                }
-              }~
         path("append"){
           formFields(
             'firstname ,
@@ -208,47 +172,130 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
           {
             (firstname, age, sex, address) =>
 
-          val person  = Person(firstname , age.toInt, sex, address)
-          val PersonFormat = jsonFormat(Person, "name", "age", "sex", "address")
-          val file: Seekable =  Resource.fromFile("file.txt")
-          file.append("\n" + PersonFormat.write(person))
-          val source = scala.io.Source.fromFile("file.txt")
-          val lines = source.mkString
-          source.close()
-          complete(lines) : @APIInfo(description = "Adding new record at the end of a file")
-         }
-        }
-      } ~
-       path("remove"){
-           formFields('user) {
-             (user) => {
-           val nameToRemove = user
-           val file: Seekable =  Resource.fromFile(new File("file.txt"))
-           var position = 0
-           try{
-             for ( line <- file.lines()){
-               if (JsonParser(line).convertTo[Person].name.equals(nameToRemove)){
-                  file.patch(position, "", OverwriteSome(line.length))
-                  println(line)
-               }  else {
-                   position = position + line.length
-               }
-             }
-           }
-           val source = scala.io.Source.fromFile("file.txt")
-           val lines = source.mkString
-           source.close()
-           complete(lines) : @APIInfo(description = "Removing record from a file")
-         }
-       }
-    }
-     }~
-      (put | parameter('method ! "put")){
+            val gender = sex.toLowerCase
+            if( !(gender.equals("male") | gender.equals("female")) | firstname.isEmpty | age.isEmpty | address.isEmpty )
+              complete(BadRequest, "Bad parameters used.")
+            else{
+              var personAge = 0
+              try {
+                personAge =age.toInt
+              } catch {
+                case ex: NumberFormatException =>{
+                  personAge = -1
+                }
+              }
+              if(personAge < 0 )
+                complete(BadRequest, "Age must be a number higher or equal 0")
+              else{
+                val person  = Person(firstname , personAge, gender, address)
+                val PersonFormat = jsonFormat(Person, "name", "age", "sex", "address")
+                val file: Seekable =  Resource.fromFile("file.txt")
+                file.append("\n" + PersonFormat.write(person))
+                val source = scala.io.Source.fromFile("file.txt")
+                val lines = source.mkString
+                source.close()
+                complete(lines) : @APIInfo(description = "Adding new record at the end of a file")
+              }
+            }
+          }
+        }~
+          path("edite"){
+            formFields(
+              'name,
+              'newName,
+              'age,
+              'newAge,
+              'sex,
+              'newSex,
+              'address,
+              'newAddress)
+            {
+              (name , newName, age, newAge, sex, newSex, address, newAddress) =>
+                var temp = 0
+                var personAge = 0
+                if (age.isEmpty ){
+                  temp = -1
+                }
+                else  {
+                  try {
+                    personAge =age.toInt
+                  } catch {
+                    case ex: NumberFormatException =>{
+                      personAge = -1
+                    }
+                  }
+                }
+                val gender = sex.toLowerCase
+                val newGender = newSex.toLowerCase
+                if(personAge < 0 | !(gender.equals("male") | gender.equals("female") | gender.isEmpty) | !(newGender.equals("male") | newGender.equals("female") | newGender.isEmpty))
+                  if (personAge < 0)
+                    complete(BadRequest, "Age must be a number higher or equal 0")
+                  else
+                    complete(BadRequest, "Wrong sex parameter use \"male\" or \"female\"")
+                else{
+                  if (temp == 0){
+                    temp = age.toInt
+                  }
+                  var temporary = 0
+                  val file: Seekable =  Resource.fromFile("file.txt")
+                  var position = 0
+                  val personToEdit = Person(name, temp, sex, address)
+                  try{
+                    val fileLenght = file.lines().mkString.length
+                    var offset = 0
+                    for( line <- file.lines()){
+                      var currentLineResult = ""
+                      println(line)
+                      if ( position + line.length <= fileLenght){
+                        currentLineResult = findMatch( line, personToEdit)}
+                      else{
+                        val linesubstring = line.substring(0, (line.length - offset))
+                        if ( linesubstring.isEmpty == false)
+                          currentLineResult = findMatch ( line.substring(0, (line.length-offset)), personToEdit )}
+                      if ( currentLineResult.isEmpty){
+                        position = position + line.length + 1
+                      }
+                      else {
 
-        complete("put")
-      }~
+                        if (newAge.isEmpty ){
+                          temporary = -1
+                        }
+                        else  {
+                          try {
+                            personAge =newAge.toInt
+                          } catch {
+                            case ex: NumberFormatException =>{
+                              personAge = -1
+                            }
+                          }
+                        }
+                        if (personAge < 0 ){
+                          complete(BadRequest, "new Age parameter must be a number higher or equal 0")
+                        } else {
+                          if (temporary == 0){
+                            temporary = newAge.toInt
+                          }
+                          val newLine =  editPerson(line , Person(newName, temporary, newSex, newAddress))
+                          file.patch(position , newLine , OverwriteSome(line.length))
+                          file.string
+                          if ( newLine.length > line.length)
+                            offset = offset + (newLine.length - line.length)
+                          position = position + newLine.length + 1
+                        }
+                      }
+                    }
+                    val source = scala.io.Source.fromFile("file.txt")
+                    val lines = source.mkString
+                    source.close()
+                    complete(lines) : @APIInfo(description = "Editing records in false based on specified cryteria")
+                  }
+                }
+            }
+          }
+      }
+     }~
       pathPrefix("api") {
-      path("api-docs") {
+      path("api-docs.json") {
         val source = scala.io.Source.fromFile("api-docs.json")
         val lines = source.mkString
         source.close()
@@ -259,6 +306,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
   }
  }
   }
+
 
   //lazy val simpleRouteCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
@@ -298,7 +346,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
   lazy val FormAdding =
       <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
         <head>
-          <link rel="stylesheet" type="text/css" href="mystyle.css" ></link>
+          <link rel="stylesheet" type="text/css" href="/mystyle.css" ></link>
         </head>
         <body>
           <h1>Add to file</h1>
@@ -334,7 +382,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
       <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
         <body>
           <h1>Remove from file</h1>
-          <form name="input" action="/remove" method="post" />
+          <form name="input" action="/plik/remove" method="delete" />
           Username: <input type="text" name="user" />
           <input type="submit" value="Submit" />
         </body>
@@ -345,7 +393,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
       <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
         <body>
           <h1>Find by </h1>
-          <form name="input" action="/plik/find" method="post" />
+          <form name="input" action="/plik/find" method="get" />
           Name: <input type="text" name="name" /> <br/>
           Age: <input type="text" name="age" /> <br/>
           Sex: <input type="text" name="sex" /> <br/>

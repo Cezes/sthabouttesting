@@ -37,7 +37,8 @@ libraryDependencies ++= Seq(
   "io.spray"            %   "spray-http"    %   "1.2-M8",
   "io.spray"            %   "spray-servlet" %   "1.2-M8",
   "org.specs2"          %%  "specs2"        % "1.14" % "test",
-  "org.scalaforge"      % "scalax"          % "0.1"
+  "org.scalaforge"      % "scalax"          % "0.1",
+  "com.wordnik" % "swagger-jaxrs_2.9.1" % "1.2.1"
 )
 
 
