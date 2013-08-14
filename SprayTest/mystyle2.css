@@ -1,0 +1,29 @@
+#formWrapper {
+width : 900px;
+padding : 20px;
+}
+
+#formWrapper label {
+width : 1000px;
+font-size : 20 px;
+line-height : 40px;
+}
+
+#formWrapper input[type="text"] , #formWrapper input[type="number"] {
+padding : 4px;
+width : 200px;
+height : 25px;
+border: 1px solid gray;
+}
+
+#formWrapper input[name="submit"] , #formWrapper input[type="reset"] {
+margin : 0;
+width : 90px;
+height : 40px;
+boarder: none;
+border-radius : 4px;
+background : -webkit-gradient(linear, 0 0, 0 100% , from(#7f7f7f) ,to(#535353));
+color : red;
+font-weight: bold;
+cursor : pointer;
+}
