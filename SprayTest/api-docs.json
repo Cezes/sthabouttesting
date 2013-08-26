@@ -1,204 +1,120 @@
-{"swaggerVersion": "1.1", "basePath": "http://localhost:8080/", "apis": [
-    {
-        "path": "/",
-        "description": "List of pages to show",
-        "operations": [
-            {
-                "httpMethod": "GET",
-                "summary": "Show possible pages to enter",
-                "notes": "Returns pages,
-                "responseClass": "void",
-                "nickname": "getPages",
-                "errorResponses": [
-                    {
-                        "code": 400,
-                        "reason": "Invalid ID supplied"
-                    },
-                    {
-                        "code": 404,
-                        "reason": "Pet not found"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "path": "/pet",
-        "description": "Operations about pets",
-        "operations": [
-            {
-                "httpMethod": "POST",
-                "summary": "Add a new pet to the store",
-                "responseClass": "void",
-                "nickname": "addPet",
-                "parameters": [
-                    {
-                        "description": "Pet object that needs to be added to the store",
-                        "paramType": "body",
-                        "required": true,
-                        "allowMultiple": false,
-                        "dataType": "Pet"
-                    }
-                ],
-                "errorResponses": [
-                    {
-                        "code": 405,
-                        "reason": "Invalid input"
-                    }
-                ]
-            },
-            {
-                "httpMethod": "PUT",
-                "summary": "Update an existing pet",
-                "responseClass": "void",
-                "nickname": "updatePet",
-                "parameters": [
-                    {
-                        "description": "Pet object that needs to be updated in the store",
-                        "paramType": "body",
-                        "required": true,
-                        "allowMultiple": false,
-                        "dataType": "Pet"
-                    }
-                ],
-                "errorResponses": [
-                    {
-                        "code": 400,
-                        "reason": "Invalid ID supplied"
-                    },
-                    {
-                        "code": 404,
-                        "reason": "Pet not found"
-                    },
-                    {
-                        "code": 405,
-                        "reason": "Validation exception"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "path": "/pet/findByStatus",
-        "description": "Operations about pets",
-        "operations": [
-            {
-                "httpMethod": "GET",
-                "summary": "Finds Pets by status",
-                "notes": "Multiple status values can be provided with comma seperated strings",
-                "responseClass": "List[Pet]",
-                "nickname": "findPetsByStatus",
-                "parameters": [
-                    {
-                        "name": "status",
-                        "description": "Status values that need to be considered for filter",
-                        "paramType": "query",
-                        "defaultValue": "available",
-                        "allowableValues": {
-                            "valueType": "LIST",
-                            "values": ["available", "pending", "sold"],
-                            "valueType": "LIST"
-                        },
-                        "required": true,
-                        "allowMultiple": true,
-                        "dataType": "string"
-                    }
-                ],
-                "errorResponses": [
-                    {
-                        "code": 400,
-                        "reason": "Invalid status value"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "path": "/pet/findByTags",
-        "description": "Operations about pets",
-        "operations": [
-            {
-                "httpMethod": "GET",
-                "summary": "Finds Pets by tags",
-                "notes": "Muliple tags can be provided with comma seperated strings. Use tag1, tag2, tag3 for testing.",
-                "deprecated": true,
-                "responseClass": "List[Pet]",
-                "nickname": "findPetsByTags",
-                "parameters": [
-                    {
-                        "name": "tags",
-                        "description": "Tags to filter by",
-                        "paramType": "query",
-                        "required": true,
-                        "allowMultiple": true,
-                        "dataType": "string"
-                    }
-                ],
-                "errorResponses": [
-                    {
-                        "code": 400,
-                        "reason": "Invalid tag value"
-                    }
-                ]
-            }
-        ]
-    }
-], "models": {
-    "Category": {
-        "id": "Category",
-        "properties": {
-            "id": {
-                "type": "long"
-            },
-            "name": {
-                "type": "string"
-            }
-        }
-    },
-    "Pet": {
-        "id": "Pet",
-        "properties": {
-            "tags": {
-                "items": {
-                    "$ref": "Tag"
-                },
-                "type": "Array"
-            },
-            "id": {
-                "type": "long"
-            },
-            "category": {
-                "type": "Category"
-            },
-            "status": {
-                "allowableValues": {
-                    "valueType": "LIST",
-                    "values": ["available", "pending", "sold"],
-                    "valueType": "LIST"
-                },
-                "description": "pet status in the store",
-                "type": "string"
-            },
-            "name": {
-                "type": "string"
-            },
-            "photoUrls": {
-                "items": {
-                    "type": "string"
-                },
-                "type": "Array"
-            }
-        }
-    },
-    "Tag": {
-        "id": "Tag",
-        "properties": {
-            "id": {
-                "type": "long"
-            },
-            "name": {
-                "type": "string"
-            }
-        }
-    }
-}}
+{"resourcePath":"",
+ "listingPath":"/api-docs/file",
+ "description":"File Processing Api. It allows to use file to store data about client, process and browse this data ",
+ "apis":[
+ {"path":"/",
+  "description":"",
+  "secured":false,
+  "operations":[
+	{"httpMethod":"GET",
+	"responseClass":"string",
+	"consumes": [
+          "text/html"
+        ],
+        "produces": [
+          "text/html"
+        ],
+	"summary":"Show available pages",
+	"notes":"Show all possibilities that user can use",
+	"deprecated":false,
+	"nickname":"showIndex",
+	"parameters":[],
+	"errorResponses":[]}]
+  },
+ {"path":"/plik/append",
+  "description":"",
+  "secured":false,
+  "operations":[
+	{"httpMethod":"POST",
+	 "responseClass":"Person",
+	 "summary":"Append entry based on form input",
+	 "deprecated":false,
+	 "nickname":"appendEntry",
+	 "parameters":[
+		{"name":"firstname",
+		 "description":"Name of customer",
+		 "required":true,
+		 "paramType":"path",
+		 "allowMultiple":false,
+		 "dataType":"string"},
+	    {"name":"age",
+		 "description":"Age of customer",
+		 "required":true,
+		 "paramType":"path",
+		 "allowMultiple":false,
+		 "dataType":"int"},
+		{"name":"sex",
+		 "description":"Sex of customer",
+		 "required":true,
+		 "paramType":"path",
+		 "allowMultiple":false,
+		 "dataType":"string"},
+		{"name":"address",
+		 "description":"Address of customer",
+		 "required":true,
+		 "paramType":"path",
+		 "allowMultiple":false,
+		 "dataType":"string"}],
+		 "errorResponses":[]}]
+  },
+ {"path":"/plik/removeName",
+  "description":"",
+  "secured":false,
+  "operations":[
+	{"httpMethod":"GET",
+	 "responseClass":"string",
+	 "summary":"Show form for deleting entries",
+	 "notes":"Shows form which asks for Username",
+	 "deprecated":false,
+	 "consumes": [
+           "text/html"
+         ],
+         "produces": [
+           "text/html"
+         ],
+	 "nickname":"showRemovingEntryForm",
+	 "parameters":[],
+	 "errorResponses":[]}]
+  },
+ {"path":"/resource/{name}",
+  "description":"",
+  "secured":false,
+  "operations":[
+	{"httpMethod":"PUT",
+	 "responseClass":"string",
+	 "summary":"Increases age of selected person",
+	 "deprecated":false,
+	 "nickname":"increaseAge",
+	 "parameters":[
+		{"name":"name",
+		 "description":"Name of customer",
+		 "required":true,
+		 "paramType":"path",
+		 "allowMultiple":false,
+		 "dataType":"string"}],
+	 "errorResponses":[]}]
+  }
+],
+"models":{
+	"Person":{
+		"id":"Person",
+		"description":"Person",
+		"properties":{
+			"age":{
+				"description":null,
+				"required":true,
+				"type":"int"},
+			"sex":{
+				"description":null,
+				"required":true,
+				"type":"string"},
+		    "name":{
+				"description":null,
+				"required":true,
+				"type":"string"},
+			"address":{
+				"description":null,
+				"required":true,
+				"type":"string"}
+}}},
+"basePath":"http://localhost:8080","swaggerVersion":"1.0","apiVersion":"1"}
