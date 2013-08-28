@@ -31,24 +31,15 @@ import Directives._
 import scalax.file.Path
 
 
-// we don't implement our route structure directly in the service actor because
-// we want to be able to test it independently, without having to spin up an actor
+
 class DemoServiceActor extends Actor with DemoService {
 
-  // the HttpService trait defines only one abstract member, which
-  // connects the services environment to the enclosing actor or test
   def actorRefFactory = context
-
-  // this actor only runs our route, but you could add
-  // other things here, like request stream processing,
-  // timeout handling or alternative handler registration
   def receive = runRoute(demoRoute)
 }
 
-// this trait defines our service behavior independently from the service actor
 trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
 
-  // we use the enclosing ActorContext's or ActorSystem's dispatcher for our Futures and Scheduler
   implicit def executionContext = actorRefFactory.dispatcher
 
   val demoRoute = {
@@ -418,7 +409,7 @@ trait DemoService extends HttpService with SprayTest.MyJsonProtocol {
     }
   }
 
-
+ // lazy vals for forms, html pages
   lazy val index =
     <html xmlns="http://www.w3.org/1999/xhtml" lang="pl" xml:lang="pl" >
       <body>
